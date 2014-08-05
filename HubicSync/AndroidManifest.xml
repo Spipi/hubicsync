@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.hubicsync"
+    android:versionCode="3"
+    android:versionName="1.2" >
+
+    <uses-sdk
+        android:minSdkVersion="14"
+        android:targetSdkVersion="19" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme" >
+        <activity
+            android:name="com.hubicsync.MainActivity"
+            android:label="@string/app_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.hubicsync.RequestTokenActivity"
+            android:label="@string/title_activity_display_message"
+            android:parentActivityName="com.hubicsync.MainActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.hubicsync.MainActivity" />
+        </activity>
+        <activity
+            android:name="com.hubicsync.AccountListActivity"
+            android:label="@string/title_activity_account_list" >
+        </activity>
+        <activity
+            android:name="com.hubicsync.ExplorerActivity"
+            android:label="@string/title_activity_explorer" >
+        </activity>
+
+        <service
+            android:name="service.HubicSyncService"
+            android:exported="false" />
+         <service
+            android:name="hubic.musicPlayer"
+            android:exported="false" />
+        <!-- Declaring broadcast receiver for BOOT_COMPLETED event -->
+        <receiver
+            android:name="service.HubicReceiver"
+            android:enabled="true"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name="com.hubicsync.AboutActivity"
+            android:label="@string/title_activity_about" >
+        </activity>
+        <activity
+            android:name="com.hubicsync.SettingsActivity"
+            android:label="@string/title_activity_settings" >
+        </activity>
+        
+    </application>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+</manifest>
