@@ -40,7 +40,7 @@ import android.os.Build;
 @SuppressLint("ValidFragment") public class MainActivity extends Activity {
 	public final static String EXTRA_MESSAGE = "com.example.hubicsync.MESSAGE";
     private static final int REQUEST_PATH = 1;
-
+   
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

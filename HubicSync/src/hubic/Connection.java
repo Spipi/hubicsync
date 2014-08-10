@@ -7,9 +7,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +31,8 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
+
+import com.hubicsync.conflictFile;
 
 import android.os.Environment;
 import android.util.Pair;
@@ -68,7 +73,10 @@ public class Connection {
 		public Pair<Header[], Integer> sendGetWithHeader(String url,List<NameValuePair> header){
 			System.out.println("lalalalaconn");
 			HttpClient httpclient = new DefaultHttpClient();
-			HttpGet hg = new HttpGet(url);
+			URL urlU;
+			String encodedUrl =url;
+		
+			HttpGet hg = new HttpGet(encodedUrl);
 			System.out.println("lalalalaconn2");
 			for(int i=0; i<header.size(); i++){
 		    	hg.setHeader(header.get(i).getName().toString(), header.get(i).getValue().toString());
@@ -179,16 +187,24 @@ public class Connection {
 		    }
 		    try {
 		    	 
-
+		    	
 		        HttpResponse response = httpclient.execute(hg);
+		       
 		        InputStream inputStream = response.getEntity().getContent();
+		       
 		         int totalSize = (int)response.getEntity().getContentLength();
 		        //variable to store total downloaded bytes
 		        int downloadedSize = 0;
-		       
+				
+				//	path= "/sdcard/hubic/hubic/é/Documents/Textes/pensées/zemmour/soucis.txt";
+			
+				
 		        File file = new File(path);
+		        File tmp = file;
+		       if(!response.getHeaders("content-type").equals("inode/directory")){
 		        file.getParentFile().mkdirs();
-		    
+		        
+		        System.out.println(path+"creeating folders" + file.getParentFile().getAbsolutePath());
 		        //this will be used to write the downloaded data into the file we created
 		        FileOutputStream fileOutput = new FileOutputStream(file);
 		        //create a buffer...
@@ -196,14 +212,17 @@ public class Connection {
 		        int bufferLength = 0; //used to store a temporary size of the buffer
 		
 		        //now, read through the input buffer and write the contents to the file
-		        while ( (bufferLength = inputStream.read(buffer)) > 0 ) {
-		                //add the data in the buffer to the file in the file output stream (the file on the sd card
-		                fileOutput.write(buffer, 0, bufferLength);
-		                //add up the size so we know how much is downloaded
-		                downloadedSize += bufferLength;
-		                
-		
-		        }
+			        while ( (bufferLength = inputStream.read(buffer)) > 0 ) {
+			                //add the data in the buffer to the file in the file output stream (the file on the sd card
+			                fileOutput.write(buffer, 0, bufferLength);
+			                //add up the size so we know how much is downloaded
+			                downloadedSize += bufferLength;
+			                
+			
+			        }
+		       }
+		       else
+		    	   file.mkdirs();
 
 		       
 		        
@@ -211,8 +230,12 @@ public class Connection {
 		        
 		    } catch (ClientProtocolException e) {
 		        // TODO Auto-generated catch block
+		    	conflictFile cf = new conflictFile();
+				cf.write(": proto exception : "+path);
 		    } catch (IOException e) {
 		        // TODO Auto-generated catch block
+		    	conflictFile cf = new conflictFile();
+				cf.write(": io exception : "+path +e.toString());//
 		    }
 		    return null;
 		}

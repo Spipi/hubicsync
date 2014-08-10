@@ -32,9 +32,9 @@ public class ItemExplorer implements Comparable<ItemExplorer>{
         	if(this.name != null && o.getName()!=null){
         		String nameThis = this.name.toLowerCase();
         		String nameOther = o.getName().toLowerCase();
-	        	if(nameOther.endsWith("/")&&!nameThis.endsWith("/"))
+	        	if(nameOther.endsWith("/")&&!nameThis.endsWith("/") || nameOther.equals(".."))
 	        		return 1;
-	        	else if(!nameOther.endsWith("/")&&nameThis.endsWith("/"))
+	        	else if(!nameOther.endsWith("/")&&nameThis.endsWith("/") || name.equals(".."))
 	        		return -1;
 	        	else
 	        		return this.name.toLowerCase().compareTo(o.getName().toLowerCase());

@@ -45,8 +45,8 @@ public class BrowserDatasource {
 		  public static final String COLUMN_SYNC = "sync";//
 		  
 		  public void addAccount(PathItem pathItem) {
-			  System.out.println(pathItem.getPath());
 		    ContentValues values = new ContentValues();
+		    
 		    values.put(SQLiteHelper.COLUMN_PATH, pathItem.getPath().replaceAll("'","\'"));
 		    values.put(SQLiteHelper.COLUMN_ACCESS_ID, pathItem.getAccessID());
 		    values.put(SQLiteHelper.COLUMN_LAST_MODIFY_SERVER , pathItem.getModified());
@@ -66,6 +66,7 @@ public class BrowserDatasource {
 		  }
 		  public void updateAccount(PathItem pathItem){
 			  	ContentValues values = new ContentValues();
+			  	
 			    values.put(SQLiteHelper.COLUMN_PATH, pathItem.getPath().replaceAll("'","\'"));
 			    values.put(SQLiteHelper.COLUMN_ACCESS_ID, pathItem.getAccessID());
 			    values.put(SQLiteHelper.COLUMN_LAST_MODIFY_SERVER , pathItem.getModified());
@@ -91,13 +92,11 @@ public class BrowserDatasource {
 		  }
 		  public List<PathItem> getChildrenOf(PathItem parent){
 			  String path = parent.getPath();
-			 System.out.println(parent.getAccessID());
-			  if(!path.endsWith("/") && path!="" )
-				  path = path + "/";
+
 			  
 			  List<PathItem> pis = new ArrayList<PathItem>();
 
-			    Cursor cursor = database.rawQuery("SELECT * FROM "+SQLiteHelper.TABLE_BROWSER+" where "+SQLiteHelper.COLUMN_ACCESS_ID+" = "+ parent.getAccessID()+" and "+SQLiteHelper.COLUMN_PATH+" like '"+path.replaceAll("'","\'")+"%';", null);
+			    Cursor cursor = database.rawQuery("SELECT * FROM "+SQLiteHelper.TABLE_BROWSER+" where "+SQLiteHelper.COLUMN_ACCESS_ID+" = "+ parent.getAccessID()+" and "+SQLiteHelper.COLUMN_PATH+" like ?;",new String[]{path+"%"});
 
 			    cursor.moveToFirst();
 			    while (!cursor.isAfterLast()) {
@@ -153,7 +152,23 @@ public class BrowserDatasource {
 			    // make sure to close the cursor
 			    cursor.close();
 			    return comments;
-			  }
+		}
+		public List<PathItem> getAllPathItemsFolderToSync() {
+			    List<PathItem> comments = new ArrayList<PathItem>();
+
+			    Cursor cursor = database.rawQuery("SELECT * FROM "+SQLiteHelper.TABLE_BROWSER+" where "+SQLiteHelper.COLUMN_SYNC+" = 1 AND "+SQLiteHelper.COLUMN_PATH +" LIKE '%/'",null);
+
+
+			    cursor.moveToFirst();
+			    while (!cursor.isAfterLast()) {
+			      PathItem comment = cursorToPathItem(cursor);
+			      comments.add(comment);
+			      cursor.moveToNext();
+			    }
+			    // make sure to close the cursor
+			    cursor.close();
+			    return comments;
+		}
 		  private PathItem cursorToPathItem(Cursor cursor) {
 
 			    boolean sync = false;
@@ -170,8 +185,44 @@ public class BrowserDatasource {
 			 Cursor cursor = database.query(SQLiteHelper.TABLE_BROWSER,allColumns, SQLiteHelper.COLUMN_PATH + " = ? AND "+SQLiteHelper.COLUMN_ACCESS_ID+" = ?",new String[]{name,Access},
 				        null, null, null);
 			 cursor.moveToFirst();
-			 if(cursor.isAfterLast()) return null;
-			 return cursorToPathItem(cursor);
+			 if(cursor.isAfterLast()){cursor.close(); return null;}
+			 PathItem pi = cursorToPathItem(cursor);
+			 cursor.close();
+			 return pi;
 		}
+
+		public List<PathItem> getSyncChildrenAndSubsOf(PathItem parent) {
+				String path = parent.getPath();
+
+			  
+			  List<PathItem> pis = new ArrayList<PathItem>();
+
+			    Cursor cursor = database.rawQuery("SELECT * FROM "+SQLiteHelper.TABLE_BROWSER+" where "+SQLiteHelper.COLUMN_ACCESS_ID+" = "+ parent.getAccessID()+"and "+SQLiteHelper.COLUMN_SYNC+" = 1 and "+SQLiteHelper.COLUMN_PATH+" like ?;",new String[]{path+"%"});
+
+			    cursor.moveToFirst();
+			    while (!cursor.isAfterLast()) {
+			    	
+				      PathItem pi = cursorToPathItem(cursor);
+				      pis.add(pi);
+				      
+			    	
+			    cursor.moveToNext();
+			    }
+			    // make sure to close the cursor
+			    cursor.close();
+			    return pis;
+			
+		}
+		public void setSyncChildrenAndSubsOf(PathItem parent,boolean sync) {
+			String path = parent.getPath();
+
+		  
+		  List<PathItem> pis = new ArrayList<PathItem>();
+
+
+		    database.execSQL("UPDATE "+SQLiteHelper.TABLE_BROWSER+" set "+SQLiteHelper.COLUMN_SYNC+"=0 where "+SQLiteHelper.COLUMN_ACCESS_ID+" = "+ parent.getAccessID()+" and "+SQLiteHelper.COLUMN_PATH+" like ? ;",new String[]{path+"%"});
+		    
+		
+	}
 		
 }

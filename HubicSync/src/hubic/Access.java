@@ -219,7 +219,7 @@ public class Access implements Serializable{
 		    String rep = conn.sendPost("https://api.hubic.com/oauth/token/%20HTTP/1.1", header,nameValuePairs);
 		    System.out.println("after req");
 			JSONObject object = new JSONObject(rep);
-			System.out.println("lalalaaaaaaaaaaaaaaaaaaaaaaaaaaeee"+rep);
+			
 			this.access_token= object.get("access_token").toString();
 			this.refresh_token= object.get("refresh_token").toString();
 			this.expiration= object.get("expires_in").toString();
@@ -235,6 +235,10 @@ public class Access implements Serializable{
 	public String getLocalStorage() {
 		// TODO Auto-generated method stub
 		return "/sdcard/hubic/"+name+"/";
+	}
+	public String getLocalTmp() {
+		// TODO Auto-generated method stub
+		return "/sdcard/hubic/tmp/";
 	}
 	
 	

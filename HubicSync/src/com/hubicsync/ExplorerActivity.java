@@ -18,6 +18,8 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.message.BasicNameValuePair;
 
+import service.HubicSyncService;
+
 import com.hubicsync.R;
 import com.hubicsync.MainActivity.NewAccountDialogFragment;
 
@@ -54,6 +56,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SeekBar;
@@ -61,12 +65,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.os.Build;
 
-public class ExplorerActivity extends ListActivity {
+public class ExplorerActivity extends ListActivity implements OnItemLongClickListener {
 	String path="";
 	private Access acc;
 	private ExplorerListAdapter adapter;
 	private String[] mFileList;
 	private String mChosenFile;
+	ArrayList<ItemExplorer> dir1;
 
 	 private musicPlayer mp3Service;
 	   private ServiceConnection mp3PlayerServiceConnection = new ServiceConnection() {
@@ -112,14 +117,22 @@ public class ExplorerActivity extends ListActivity {
 	        Intent connectionIntent = new Intent(this, musicPlayer.class);
 	        bindService(connectionIntent, mp3PlayerServiceConnection,
 	                Context.BIND_AUTO_CREATE);
+	        this.getListView().setLongClickable(true);
+	        this.getListView().setOnItemLongClickListener(this);
 			fill (path);
-
+            
+			
 	    
 
 	        }
 	}
 	public ArrayList<ItemExplorer> populateDB(){
-		final ArrayList<ItemExplorer> dir1= new ArrayList<ItemExplorer>();
+		dir1= new ArrayList<ItemExplorer>();
+		if(!path.equals("") && !path.equals("/")){
+			
+			
+			dir1.add(new ItemExplorer(path.substring(0,path.substring(0, path.length()-2).lastIndexOf("/")+1),"..","diretory_icon",false));
+		}
 		final BrowserDatasource bds = new BrowserDatasource(this);
 		Thread t = new Thread() {
 			@Override
@@ -183,7 +196,12 @@ public class ExplorerActivity extends ListActivity {
 	}
 	
 	public ArrayList<ItemExplorer> getFromDB(){
-		ArrayList<ItemExplorer> dir1= new ArrayList<ItemExplorer>();
+		dir1= new ArrayList<ItemExplorer>();
+		if(!path.equals("") && !path.equals("/")){
+			
+			
+			dir1.add(new ItemExplorer(path.substring(0,path.substring(0, path.length()-2).lastIndexOf("/")+1),"..","diretory_icon",false));
+		}
 		BrowserDatasource bds = new BrowserDatasource(this);
 		bds.open();
 
@@ -244,94 +262,63 @@ public class ExplorerActivity extends ListActivity {
         }
 		return sb.toString();
 	}
-	
-	public void onListItemClick(ListView l, View v, final int position, long id) {
+	public String stopSync(PathItem pi, BrowserDatasource ad){
+		String last = pi.getPath();
 		
-        if(adapter.getItem(position).getName().endsWith("/")){
-	      //  Intent intent = new Intent(this, ExplorerActivity.class);
-	      path = adapter.getItem(position).getPath();
-	      /*  intent.putExtra("ACCESS", acc);
-	        intent.putExtra("PATH", adapter.getItem(position).getPath());
-	       	startActivity(intent);*/
-	      fill(path);
-        }
-        else{
-        	final BrowserDatasource ad = new BrowserDatasource(this);
+		ad.open();
+		pi.setSync(false);
+		ad.addAccount(pi);
+		
+			//folder
+		if(pi.getPath().endsWith("/")){
+	
+				ad.setSyncChildrenAndSubsOf(pi,true);
+			
+		}
+			return last;
+			
+		
+	}
+
+public boolean onItemLongClick(AdapterView<?> arg0, View arg1, final int position,
+		long arg3) {
+		if(adapter.getItem(position).getName().endsWith("/")){
+			final BrowserDatasource ad = new BrowserDatasource(this);
         	ad.open();
         	final Context ct = this;
         	final PathItem pi= ad.getAccount(adapter.getItem(position).getPath(), acc.getId()+"");
-        	CharSequence choices[] = null;
-        	if(adapter.getItem(position).getName().toLowerCase().endsWith("mp3") || adapter.getItem(position).getName().toLowerCase().endsWith("ogg"))
-        		choices = new CharSequence[] {"Stream","Download", "Sync on my phone"};
-        	else 
-        		choices = new CharSequence[] {"Download", "Sync on my phone"};
-        	final CharSequence colors[] = choices;
-        	if(pi.getSync())
-        		colors[colors.length-1]= "Stop syncing";
-        	
-        	
-        	adapter.getItem(position).getPathItem();
-        	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			final CharSequence colors[] = new CharSequence[] {"Open", "Sync on my phone"};
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
         	builder.setTitle("");
         	builder.setItems(colors, new DialogInterface.OnClickListener() {
         	    @Override
         	    public void onClick(DialogInterface dialog, int which) {
         	        // the user clicked on colors[which]
-        	    	if(colors[which].equals("Download")){
-        	    	
-
-        	    		Thread t = new Thread() {
-        	    			@Override
-        	    			public void run() {
-	        	    			OpenstackConnector osc = new OpenstackConnector(acc);
-	        	    			osc.setRoot("default");
-	        	    			Header[] hd =osc.DownloadFile(adapter.getItem(position).getPath(),pi.getModified());
-	        	    			if(hd!=null)
-	        	    			for(int i = 0 ; i< hd.length; i++){
-	        	    				
-	        	    				if(hd[i].getName().equals("Last-Modified")){
-	        	    					
-	        	    					try {
-	        	    						pi.setModified(hd[i].getValue());
-											pi.setMD5Local(getMD5(new File(acc.getLocalStorage()+pi.getPath())));
-											ad.addAccount(pi);
-										} catch (NoSuchAlgorithmException e) {
-											// TODO Auto-generated catch block
-											e.printStackTrace();
-										} catch (IOException e) {
-											// TODO Auto-generated catch block
-											e.printStackTrace();
-										}
-	        	    					
-        	
-	        	    				}
-	        	    			}
-        	    			}
-        	    		};
-        	    		t.start();
-        	    		try {
-        					t.join();
-        				} catch (InterruptedException e) {
-        					// TODO Auto-generated catch block
-        					e.printStackTrace();
-        				}
-        	    		
-        	    	}
-        	    	else if(colors[which].equals("Sync on my phone")){
+        	    	 if(colors[which].equals("Sync on my phone")){
         	    		pi.setSync(true);
         	    		ad.addAccount(pi);
         	    		
         	    	}
         	    	else if(colors[which].equals("Stop syncing")){
-        	    		pi.setSync(false);
-        	    		ad.addAccount(pi);
+        
+        	    	
+        	    		new Thread(){
+        	    			@Override
+        	    			public void run(){
+        	    				String last = stopSync(pi, ad);
+        	    				System.out.println("end"+last);
+        	    			}
+        	    		}.start();
+        	    
+        	    		//ct.startService(myIntent);
+        	    		
         	    		
         	    	}
-        	    	else if(colors[which].equals("Stream")){
         	    	
-        	    		TextView tv = (TextView) findViewById(R.id.editText1);
-        	    		tv.setText(adapter.getItem(position).getName());
-        	    		mp3Service.stream( acc, "default",ct,adapter.getItem(position).getPath());
+        	    	else if(colors[which].equals("Open")){
+        	    		path = adapter.getItem(position).getPath();
+        				fill(path);
+        	  	      //fill(path);
         	    		
         	    	}
         	    		
@@ -339,11 +326,129 @@ public class ExplorerActivity extends ListActivity {
         	    }
         	});
         	builder.show();
+		}
+		return true;
+	}
+	public void onListItemClick(ListView l, View v, final int position, long id) {
+		
+			if(!adapter.getItem(position).getName().equals("..") && !adapter.getItem(position).getName().endsWith("/")){
+	        	final BrowserDatasource ad = new BrowserDatasource(this);
+	        	ad.open();
+	        	final Context ct = this;
+	        	final PathItem pi= ad.getAccount(adapter.getItem(position).getPath(), acc.getId()+"");
+	        	if(pi!=null){
+		        	CharSequence choices[] = null;
+		        	
+			        if(adapter.getItem(position).getName().toLowerCase().endsWith("mp3")|| adapter.getItem(position).getName().toLowerCase().endsWith("ogg")|| adapter.getItem(position).getName().toLowerCase().endsWith("flac") || adapter.getItem(position).getName().toLowerCase().endsWith("ogg"))
+			        		choices = new CharSequence[] {"Play/Stream","Download", "Sync on my phone"};
+			        	
+		        	
+		        	else
+		        		choices = new CharSequence[] {"Open", "Sync on my phone"};
+		        	final CharSequence colors[] = choices;
+		        	if(pi.getSync())
+		        		colors[colors.length-1]= "Stop syncing";
+		        	
+		        	
+		        	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		        	builder.setTitle("");
+		        	builder.setItems(colors, new DialogInterface.OnClickListener() {
+		        	    @Override
+		        	    public void onClick(DialogInterface dialog, int which) {
+		        	        // the user clicked on colors[which]
+		        	    	if(colors[which].equals("Download")){
+		        	    	
+		
+		        	    		Thread t = new Thread() {
+		        	    			@Override
+		        	    			public void run() {
+			        	    			OpenstackConnector osc = new OpenstackConnector(acc);
+			        	    			osc.setRoot("default");
+			        	    			Header[] hd =osc.DownloadFile(adapter.getItem(position).getPath(),pi.getModified());
+			        	    			if(hd!=null)
+			        	    			for(int i = 0 ; i< hd.length; i++){
+			        	    				
+			        	    				if(hd[i].getName().equals("Last-Modified")){
+			        	    					
+			        	    					try {
+			        	    						pi.setModified(hd[i].getValue());
+													pi.setMD5Local(getMD5(new File(acc.getLocalStorage()+pi.getPath())));
+													ad.addAccount(pi);
+												} catch (NoSuchAlgorithmException e) {
+													// TODO Auto-generated catch block
+													e.printStackTrace();
+												} catch (IOException e) {
+													// TODO Auto-generated catch block
+													e.printStackTrace();
+												}
+			        	    					
+		        	
+			        	    				}
+			        	    			}
+		        	    			}
+		        	    		};
+		        	    		t.start();
+		        	    		try {
+		        					t.join();
+		        				} catch (InterruptedException e) {
+		        					// TODO Auto-generated catch block
+		        					e.printStackTrace();
+		        				}
+		        	    		
+		        	    	}
+		        	    	else if(colors[which].equals("Sync on my phone")){
+		        	    		pi.setSync(true);
+		        	    		ad.addAccount(pi);
+		        	    		
+		        	    	}
+		        	    	else if(colors[which].equals("Stop syncing")){
+		        
+		        	    	
+		        	    		new Thread(){
+		        	    			@Override
+		        	    			public void run(){
+		        	    				String last = stopSync(pi, ad);
+		        	    				System.out.println("end"+last);
+		        	    			}
+		        	    		}.start();
+		        	    
+		        	    		//ct.startService(myIntent);
+		        	    		
+		        	    		
+		        	    	}
+		        	    	else if(colors[which].equals("Play/Stream")){
+		        	    		Button b = (Button) findViewById(R.id.button1);
+		        	    		TextView tv = (TextView) findViewById(R.id.editText1);
+		        	    		tv.setText(adapter.getItem(position).getName());
+		        	    		mp3Service.setAcc(acc);
+		        	    		mp3Service.setRoot("default");
+		        	    	    mp3Service.setContext(ct);
+		        	    	    mp3Service.setPlist(dir1);
+		        	    		mp3Service.stream(position);
+		        	    		b.setText("Pause");
+		        	    		
+		        	    	}
+		        	    	else if(colors[which].equals("Open")){
+		        	    		path = adapter.getItem(position).getPath();
+		        				fill(path);
+		        	  	      //fill(path);
+		        	    		
+		        	    	}
+		        	    		
+		        	    	
+		        	    }
+		        	});
+		        	builder.show();
+	        	}
+	        	
+			}
+			else{
+				path = adapter.getItem(position).getPath();
+				fill(path);
+			}
         	
         	
-        	
-        	
-        }
+        
         
     }
 	@Override
@@ -475,8 +580,27 @@ public class ExplorerActivity extends ListActivity {
     public void sendPause(View view) {
         // Do something in response to button
     	Button b = (Button) view.findViewById(R.id.button1);
-    	b.setBackgroundResource(R.drawable.play);
-    	mp3Service.pauseSong(this);
+    	if(mp3Service.isPlaying()){
+    		mp3Service.pauseSong(this);
+    		b.setText("Play");
+    	}
+    	else{
+    		mp3Service.playSong(this);
+    		b.setText("Pause");
+    	}
+    	
+    	
+    }
+    public void sendPlayNext(View view) {
+        // Do something in response to button
+    	mp3Service.playNext();
+    	
+    	
+    }
+ 
+    public void sendPlayPrevious(View view) {
+        // Do something in response to button
+    	mp3Service.playPrevious();
     	
     	
     }
@@ -499,5 +623,8 @@ public class ExplorerActivity extends ListActivity {
 			return rootView;
 		}
 	}
+
+
+	
 
 }
